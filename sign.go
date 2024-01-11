@@ -19,7 +19,7 @@ import (
  )
   
  // SignFd signs the fileData using the given signer and private key.
- func SignFd(sender, submitter common.Address, gasPrice, index, length uint64, commitment []byte, signer FdSigner, prv *ecdsa.PrivateKey) (common.hash,[]byte, error) {
+ func SignFd(sender, submitter common.Address, gasPrice, index, length uint64, commitment []byte, signer FdSigner, prv *ecdsa.PrivateKey) (common.Hash,[]byte, error) {
 	 h := signer.Hash(sender,submitter,gasPrice,index,length,commitment)
 	 sig, err := crypto.Sign(h[:], prv)
 	 if err != nil {
@@ -44,7 +44,7 @@ import (
  // elliptic curve and an error if it failed deriving or upon an incorrect
  // signature.
  //
- func FdSender(signer FdSigner, sig []byte, signHash common.hash) (common.Address, error) {
+ func FdSender(signer FdSigner, sig []byte, signHash common.Hash) (common.Address, error) {
 	 addr,err := signer.Sender(sig, signHash)
 	 if err != nil {
 		 return common.Address{}, err
@@ -60,7 +60,7 @@ import (
  // new protocol rules.
  type FdSigner interface {
 	 // Sender returns the sender address of the fileData.
-	 Sender(sig []byte, signHash common.hash) (common.Address, error)
+	 Sender(sig []byte, signHash common.Hash) (common.Address, error)
  
 	 // SignatureValues returns the raw R, S, V values corresponding to the
 	 // given signature.
@@ -104,7 +104,7 @@ import (
 	 return ok && eip155.chainId.Cmp(s.chainId) == 0
  }
  
- func (s EIP155FdSigner) Sender(sig []byte, signHash common.hash) (common.Address, error) {
+ func (s EIP155FdSigner) Sender(sig []byte, signHash common.Hash) (common.Address, error) {
 	 R, S, V := decodeSignature(sig)
 	 V = new(big.Int).Sub(V, s.chainIdMul)
 	 V.Sub(V, big8)
@@ -158,7 +158,7 @@ import (
 	 return hs.FrontierFdSigner.SignatureValues(sig)
  }
  
- func (hs HomesteadFdSigner) Sender(sig []byte, signHash common.hash) (common.Address, error) {
+ func (hs HomesteadFdSigner) Sender(sig []byte, signHash common.Hash) (common.Address, error) {
 	 r, s ,v := decodeSignature(sig)
 	 v.Sub(v,new(big.Int).SetUint64(27))
 	 return recoverPlain(signHash, r, s, v, true)
@@ -178,7 +178,7 @@ import (
 	 return ok
  }
  
- func (fs FrontierFdSigner) Sender(sig []byte, signHash common.hash) (common.Address, error) {
+ func (fs FrontierFdSigner) Sender(sig []byte, signHash common.Hash) (common.Address, error) {
 	 r, s, v := decodeSignature(sig)
 	 v = v.Mul(v,new(big.Int).SetUint64(27))
 	 return recoverPlain(signHash, r, s, v, false)
