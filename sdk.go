@@ -18,7 +18,7 @@ import (
 	solsha3 "github.com/miguelmota/go-solidity-sha3"
 )
 
-const dChunkSize = 45
+const dChunkSize = 30
 const dSrsSize = 1 << 16
 
 type DomiconSdk struct {
