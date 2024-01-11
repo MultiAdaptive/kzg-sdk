@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
+	"fmt"
 	"math/big"
 	"os"
 
@@ -25,36 +26,60 @@ type DomiconSdk struct {
 }
 
 // NewDomiconSdk 初始化sdk，可以设置srsSize=1 << 16
-func NewDomiconSdk(srsSize uint64) *DomiconSdk {
+func GenerateSRSFile(srsSize uint64) error {
 	quickSrs, err := kzg.NewSRS(ecc.NextPowerOfTwo(srsSize), big.NewInt(-1))
+	if err != nil {
+		fmt.Println("NewSRS failed, ", err)
+		return err
+	}
 	file, err := os.Create("./srs.txt")
+	if err != nil {
+		fmt.Println("create file failed, ", err)
+		return err
+	}
+	defer file.Close()
 	quickSrs.WriteTo(file)
 	if err != nil {
-		panic(err)
+		fmt.Println("write file failed, ", err)
+		return err
 	}
-	file.Close()
-	return &DomiconSdk{srs: quickSrs}
+	return nil
 }
 
-func ReaderDomiconSRS(srsSize uint64) *DomiconSdk {
+// all user should load same srs file
+func InitDomiconSdk(srsSize uint64, srsPath string) (*DomiconSdk, error) {
 	var newsrs kzg.SRS
 	newsrs.Pk.G1 = make([]bls12381.G1Affine, srsSize)
-	file, err := os.Open("./srs.txt")
-	fn, err2 := newsrs.ReadFrom(file)
+	if _, err := os.Stat(srsPath); err != nil {
+		return nil, err
+	}
+	file, err := os.Open(srsPath)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	if err2 != nil {
-		panic(err2)
+	defer file.Close()
+	_, err = newsrs.ReadFrom(file)
+	if err != nil {
+		return nil, err
 	}
-	println(fn)
-	file.Close()
-	return &DomiconSdk{srs: &newsrs}
+
+	return &DomiconSdk{srs: &newsrs}, nil
 }
 
-func (domiconSdk *DomiconSdk) DataToPolynomial(data []byte) []fr.Element {
+func (domiconSdk *DomiconSdk) GenerateDataCommit(data []byte) (kzg.Digest, error) {
+	poly := dataToPolynomial(data)
+	digest, err := kzg.Commit(poly, domiconSdk.srs.Pk)
+	if err != nil {
+		return kzg.Digest{}, err
+	}
+	return digest, nil
+}
+
+func dataToPolynomial(data []byte) []fr.Element {
 	chunks := chunkBytes(data, dChunkSize)
-	ps := make([]fr.Element, len(chunks))
+	chunksLen := len(chunks)
+
+	ps := make([]fr.Element, chunksLen)
 	for i, chunk := range chunks {
 		ps[i].SetBytes(chunk)
 	}
@@ -124,16 +149,26 @@ func random1Polynomial(size int) []fr.Element {
 }
 
 func main() {
-	println("begin")
+	fmt.Println("The steps to generate CD(commit data)")
 	//sdk := NewDomiconSdk(dSrsSize)
-	sdk := ReaderDomiconSRS(dSrsSize)
-	p := random1Polynomial(dSrsSize / 2)
-	digest, err := kzg.Commit(p, sdk.srs.Pk)
+	fmt.Println("1. load SRS file to init domicon SDK")
+	sdk, err := InitDomiconSdk(dSrsSize, "./srs.txt")
 	if err != nil {
-		panic(err)
+		fmt.Println("InitDomiconSdk failed")
+		return
 	}
 
-	//bytes := make([]byte,0)
-	//bytes = append(bytes,digest.X.Bytes()...)
-	println("?", digest.Marshal())
+	fmt.Println("2. prepare test data ")
+	data := make([]byte, dChunkSize*17)
+	for i := range data {
+		data[i] = 1
+	}
+
+	fmt.Print("3. generate data commit")
+	digest, err := sdk.GenerateDataCommit(data)
+	if err != nil {
+		fmt.Println("GenerateDataCommit failed")
+		return
+	}
+	fmt.Println("commit data is:", digest.Bytes())
 }
