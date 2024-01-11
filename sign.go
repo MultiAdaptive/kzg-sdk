@@ -30,7 +30,7 @@ import (
 	 }
 		r, s, v, err := signer.SignatureValues(sig)
 		if err != nil {
-		return nil, err
+		return h,nil, err
 	}
 
 	newSign := make([]byte, 0)
