@@ -17,59 +17,7 @@ import (
 	 ErrInvalidSig           = errors.New("invalid fileData v, r, s values")
 	 rrInvalidChainId 				= errors.New("invalid chain id for signer")
  )
- 
- // sigFdCache is used to cache the derived sender and contains
- // the signer used to derive it.
- // type sigFdCache struct {
- // 	signer FdSigner
- // 	from   common.Address
- // }
- 
- // MakeFdSigner returns a Signer based on the given chain config and block number.
- func MakeFdSigner(config *params.ChainConfig, blockNumber *big.Int, blockTime uint64) FdSigner {
-	 var signer FdSigner
-	 switch {
-	 case config.IsEIP155(blockNumber):
-		 signer = NewEIP155FdSigner(config.ChainID)
-	 case config.IsHomestead(blockNumber):
-		 signer = HomesteadFdSigner{}
-	 default:
-		 signer = FrontierFdSigner{}
-	 }
-	 return signer
- }
- 
- // LatestFdSigner returns the 'most permissive' Signer available for the given chain
- // configuration. Specifically, this enables support of all types of fileDatas
- // when their respective forks are scheduled to occur at any block number (or time)
- // in the chain config.
- //
- // Use this in fileData-handling code where the current block number is unknown. If you
- // have the current block number available, use MakeSigner instead.
- func LatestFdSigner(config *params.ChainConfig) FdSigner {
-	 if config.ChainID != nil {
-		 if config.EIP155Block != nil {
-			 return NewEIP155FdSigner(config.ChainID)
-		 }
-	 }
-	 return HomesteadFdSigner{}
- }
- 
- 
- // LatestFdSignerForChainID returns the 'most permissive' Signer available. Specifically,
- // this enables support for EIP-155 replay protection and all implemented EIP-2718
- // fileData types if chainID is non-nil.
- //
- // Use this in fileData-handling code where the current block number and fork
- // configuration are unknown. If you have a ChainConfig, use LatestSigner instead.
- // If you have a ChainConfig and know the current block number, use MakeSigner instead.
- func LatestFdSignerForChainID(chainID *big.Int) FdSigner {
-	 if chainID == nil {
-		 return HomesteadFdSigner{}
-	 }
-	 return NewEIP155FdSigner(chainID)
- }
- 
+  
  // SignFd signs the fileData using the given signer and private key.
  func SignFd(sender, submitter common.Address, gasPrice, index, length uint64, commitment []byte, signer FdSigner, prv *ecdsa.PrivateKey) (common.hash,[]byte, error) {
 	 h := signer.Hash(sender,submitter,gasPrice,index,length,commitment)
