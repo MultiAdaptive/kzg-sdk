@@ -1,0 +1,139 @@
+package main
+
+import (
+	"crypto/ecdsa"
+	"crypto/rand"
+	"math/big"
+	"os"
+
+	"github.com/consensys/gnark-crypto/ecc"
+	bls12381 "github.com/consensys/gnark-crypto/ecc/bls12-381"
+	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
+	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr/kzg"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
+	solsha3 "github.com/miguelmota/go-solidity-sha3"
+)
+
+const dChunkSize = 45
+const dSrsSize = 1 << 16
+
+type DomiconSdk struct {
+	srs *kzg.SRS
+}
+
+// NewDomiconSdk 初始化sdk，可以设置srsSize=1 << 16
+func NewDomiconSdk(srsSize uint64) *DomiconSdk {
+	quickSrs, err := kzg.NewSRS(ecc.NextPowerOfTwo(srsSize), big.NewInt(-1))
+	file, err := os.Create("./srs.txt")
+	quickSrs.WriteTo(file)
+	if err != nil {
+		panic(err)
+	}
+	file.Close()
+	return &DomiconSdk{srs: quickSrs}
+}
+
+func ReaderDomiconSRS(srsSize uint64) *DomiconSdk {
+	var newsrs kzg.SRS
+	newsrs.Pk.G1 = make([]bls12381.G1Affine, srsSize)
+	file, err := os.Open("./srs.txt")
+	fn, err2 := newsrs.ReadFrom(file)
+	if err != nil {
+		panic(err)
+	}
+	if err2 != nil {
+		panic(err2)
+	}
+	println(fn)
+	file.Close()
+	return &DomiconSdk{srs: &newsrs}
+}
+
+func (domiconSdk *DomiconSdk) DataToPolynomial(data []byte) []fr.Element {
+	chunks := chunkBytes(data, dChunkSize)
+	ps := make([]fr.Element, len(chunks))
+	for i, chunk := range chunks {
+		ps[i].SetBytes(chunk)
+	}
+	return ps
+}
+
+func (domiconSdk *DomiconSdk) DataCommit(polynomials []fr.Element) (kzg.Digest, error) {
+	digest, err := kzg.Commit(polynomials, domiconSdk.srs.Pk)
+	return digest, err
+}
+
+func (domiconSdk *DomiconSdk) TxSign(key *ecdsa.PrivateKey, commitment kzg.Digest, addressA common.Address, addressB common.Address, data []byte) ([]byte, []byte) {
+	commitmentBytes := commitment.Bytes()
+	var mergedData []byte
+	mergedData = append(mergedData, commitmentBytes[:]...)
+	mergedData = append(mergedData, addressA.Bytes()...)
+	mergedData = append(mergedData, addressB.Bytes()...)
+	mergedData = append(mergedData, data...)
+
+	return sign(string(mergedData), key)
+}
+
+func chunkBytes(data []byte, chunkSize int) [][]byte {
+	var chunks [][]byte
+
+	for i := 0; i < len(data); i += chunkSize {
+		end := i + chunkSize
+		if end > len(data) {
+			end = len(data)
+		}
+		chunks = append(chunks, data[i:end])
+	}
+
+	return chunks
+}
+
+func eyGen() *ecdsa.PrivateKey {
+	key, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return key
+}
+
+func sign(message string, key *ecdsa.PrivateKey) ([]byte, []byte) {
+	// Turn the message into a 32-byte hash
+	hash := solsha3.SoliditySHA3(solsha3.String(message))
+	// Prefix and then hash to mimic behavior of eth_sign
+	prefixed := solsha3.SoliditySHA3(solsha3.String("\x19Ethereum Signed Message:\n32"), solsha3.Bytes32(hash))
+	sig, err := secp256k1.Sign(prefixed, math.PaddedBigBytes(key.D, 32))
+
+	if err != nil {
+		panic(err)
+	}
+
+	return sig, prefixed
+}
+
+func random1Polynomial(size int) []fr.Element {
+	f := make([]fr.Element, size)
+	for i := 0; i < size; i++ {
+		f[i].SetRandom()
+	}
+	return f
+}
+
+func main() {
+	println("begin")
+	//sdk := NewDomiconSdk(dSrsSize)
+	sdk := ReaderDomiconSRS(dSrsSize)
+	p := random1Polynomial(dSrsSize / 2)
+	digest, err := kzg.Commit(p, sdk.srs.Pk)
+	if err != nil {
+		panic(err)
+	}
+
+	//bytes := make([]byte,0)
+	//bytes = append(bytes,digest.X.Bytes()...)
+	println("?", digest.Marshal())
+}
