@@ -1,4 +1,4 @@
-module github.com/domicon-labs/KZG-SDK
+module github.com/domicon-labs/kzg-sdk
 
 go 1.21.3
 
