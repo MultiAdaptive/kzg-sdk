@@ -1,4 +1,4 @@
-package main
+package kzg_sdk
 
 import (
 	"crypto/ecdsa"
@@ -148,6 +148,7 @@ func random1Polynomial(size int) []fr.Element {
 	return f
 }
 
+/*
 func main() {
 	fmt.Println("The steps to generate CD(commit data)")
 	//sdk := NewDomiconSdk(dSrsSize)
@@ -172,3 +173,4 @@ func main() {
 	}
 	fmt.Println("commit data is:", digest.Bytes())
 }
+*/

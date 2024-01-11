@@ -1,4 +1,4 @@
-package main
+package kzg_sdk_test
 
 import (
 	"crypto/sha256"
