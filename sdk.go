@@ -32,7 +32,7 @@ func GenerateSRSFile(srsSize uint64) error {
 		fmt.Println("NewSRS failed, ", err)
 		return err
 	}
-	file, err := os.Create("./srs.txt")
+	file, err := os.Create("./srs")
 	if err != nil {
 		fmt.Println("create file failed, ", err)
 		return err
@@ -152,7 +152,7 @@ func main() {
 	fmt.Println("The steps to generate CD(commit data)")
 	//sdk := NewDomiconSdk(dSrsSize)
 	fmt.Println("1. load SRS file to init domicon SDK")
-	sdk, err := InitDomiconSdk(dSrsSize, "./srs.txt")
+	sdk, err := InitDomiconSdk(dSrsSize, "./srs")
 	if err != nil {
 		fmt.Println("InitDomiconSdk failed")
 		return
