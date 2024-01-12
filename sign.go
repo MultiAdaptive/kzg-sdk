@@ -9,8 +9,6 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-
-	// "fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
