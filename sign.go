@@ -4,18 +4,22 @@
  * @Description: This file is part of the DOMICON library.
  */
 package kzg_sdk
+
 import (
-	 "crypto/ecdsa"
-	 "math/big"
-	 "errors"
-	 "fmt"
-	 "github.com/ethereum/go-ethereum/common"
-	 "github.com/ethereum/go-ethereum/crypto"
- )
+	"crypto/ecdsa"
+	"errors"
+	"fmt"
+
+	// "fmt"
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+)
  
  var (
 	 ErrInvalidSig           = errors.New("invalid fileData v, r, s values")
-	 rrInvalidChainId 				= errors.New("invalid chain id for signer")
+	 ErrInvalidChainId 				= errors.New("invalid chain id for signer")
  )
   
  // SignFd signs the fileData using the given signer and private key.
@@ -28,15 +32,15 @@ import (
 	 if len(sig) == 0 {
 		 return h,nil,errors.New("sign is empty")
 	 }
-		r, s, v, err := signer.SignatureValues(sig)
-		if err != nil {
-		return h,nil, err
-	}
+	 r, s, v, err := signer.SignatureValues(sig)
+	 if err != nil {
+		 return h,nil, err
+	 }
 
-	newSign := make([]byte, 0)
-	newSign = append(newSign,	r.Bytes()...)
-	newSign = append(newSign, s.Bytes()...)
-	newSign = append(newSign, v.Bytes()...)
+	 newSign := make([]byte, 0)
+	 newSign = append(newSign, r.Bytes()...)
+	 newSign = append(newSign, s.Bytes()...)
+	 newSign = append(newSign, v.Bytes()...)
 	return h,newSign,nil
  }
  
@@ -105,10 +109,9 @@ import (
  }
  
  func (s EIP155FdSigner) Sender(sig []byte, signHash common.Hash) (common.Address, error) {
-	 R, S, V := decodeSignature(sig)
+	 R,S,V := sliteSignature(sig)
 	 V = new(big.Int).Sub(V, s.chainIdMul)
 	 V.Sub(V, big8)
-	 V.Sub(V, new(big.Int).SetUint64(27))
 	 return recoverPlain(signHash, R, S, V, true)
  }
  
@@ -179,7 +182,7 @@ import (
  }
  
  func (fs FrontierFdSigner) Sender(sig []byte, signHash common.Hash) (common.Address, error) {
-	 r, s, v := decodeSignature(sig)
+	 r, s, v := sliteSignature(sig)
 	 v = v.Mul(v,new(big.Int).SetUint64(27))
 	 return recoverPlain(signHash, r, s, v, false)
  }
@@ -204,7 +207,6 @@ import (
 	 })
  }
  
- 
  func decodeSignature(sig []byte) (r, s, v *big.Int) {
 	 if len(sig) != crypto.SignatureLength {
 		 panic(fmt.Sprintf("wrong size for signature: got %d, want %d", len(sig), crypto.SignatureLength))
@@ -212,7 +214,15 @@ import (
 	 r = new(big.Int).SetBytes(sig[:32])
 	 s = new(big.Int).SetBytes(sig[32:64])
 	 v = new(big.Int).SetBytes([]byte{sig[64] + 27})
+
 	 return r, s, v
+ }
+
+ func sliteSignature(sig []byte) (r,s,v *big.Int) {
+	r = new(big.Int).SetBytes(sig[:32])
+	s = new(big.Int).SetBytes(sig[32:64])
+	v = new(big.Int).SetBytes(sig[64:])
+	return r,s,v
  }
  
  func recoverPlain(sighash common.Hash, R, S, Vb *big.Int, homestead bool) (common.Address, error) {
