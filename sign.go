@@ -54,6 +54,14 @@ import (
 	 return addr, nil
  }
  
+//get a v value from signer 
+func FdSignerGetVValue(signer FdSigner, sig []byte) uint64 {
+	_,_,V := sliteSignature(sig)
+	V = new(big.Int).Sub(V, signer.ChainID())
+	V.Sub(V, big8)
+	return V.Uint64()
+}
+
  // FdSigner encapsulates fileData signature handling. The name of this type is slightly
  // misleading because Signers don't actually sign, they're just for validating and
  // processing of signatures.

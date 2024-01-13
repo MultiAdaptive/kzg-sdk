@@ -13,10 +13,12 @@ func TestEIP155FdSigning(t *testing.T) {
 	if err != nil {
 		println("err----",err.Error())
 	}
-	
+
 	senAddr := crypto.PubkeyToAddress(key.PublicKey)
 
-	signer := NewEIP155FdSigner(big.NewInt(12))
+	println("senAddr----",senAddr.Hex())
+
+	signer := NewEIP155FdSigner(big.NewInt(33211))
 
 	key1, _ := crypto.GenerateKey()
 	subAddr := crypto.PubkeyToAddress(key1.PublicKey)
@@ -34,6 +36,12 @@ func TestEIP155FdSigning(t *testing.T) {
 	if err != nil {
 		t.Errorf("err----- %x",err.Error())
 	}
+
+	println("signHash----",signHash.Hex())
+
+	signStr := hex.EncodeToString(signData)
+
+	println("signData----",signStr)
 
 	// verify
 	from, err := FdSender(signer,signData,signHash)
