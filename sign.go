@@ -7,7 +7,6 @@ package kzg_sdk
 
 import (
 	"crypto/ecdsa"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -55,14 +54,6 @@ import (
 	 return addr, nil
  }
  
-//get a v value from signer 
-func FdSignerGetVValue(signer FdSigner, sig []byte) uint64 {
-	_,_,V := sliteSignature(sig)
-	V = new(big.Int).Sub(V, signer.ChainID())
-	V.Sub(V, big8)
-	return V.Uint64()
-}
-
  // FdSigner encapsulates fileData signature handling. The name of this type is slightly
  // misleading because Signers don't actually sign, they're just for validating and
  // processing of signatures.
@@ -88,7 +79,7 @@ func FdSignerGetVValue(signer FdSigner, sig []byte) uint64 {
 	 Equal(FdSigner) bool
  }
  
- var big8 = big.NewInt(8)
+ //var big8 = big.NewInt(8)
  
  // EIP155Signer implements Signer using the EIP-155 rules. This accepts transactions which
  // are replay-protected as well as unprotected homestead transactions.
@@ -117,8 +108,9 @@ func FdSignerGetVValue(signer FdSigner, sig []byte) uint64 {
  
  func (s EIP155FdSigner) Sender(sig []byte, signHash common.Hash) (common.Address, error) {
 	 R,S,V := sliteSignature(sig)
-	 V = new(big.Int).Sub(V, s.chainIdMul)
-	 V.Sub(V, big8)
+	//  V = new(big.Int).Sub(V, s.chainIdMul)
+	//  V.Sub(V, big8)
+	//  println("v----",V.Uint64())
 	 return recoverPlain(signHash, R, S, V, true)
  }
  
@@ -126,48 +118,25 @@ func FdSignerGetVValue(signer FdSigner, sig []byte) uint64 {
  // needs to be in the [R || S || V] format where V is 0 or 1.
  func (s EIP155FdSigner) SignatureValues(sig []byte) (R, S, V *big.Int, err error) {
 	 R, S, V = decodeSignature(sig)
-	 if s.chainId.Sign() != 0 {
-		 V = big.NewInt(int64(sig[64] + 35))
-		 V.Add(V, s.chainIdMul)
-	 }
+	//  if s.chainId.Sign() != 0 {
+	// 	 V = big.NewInt(int64(sig[64] + 35))
+	// 	 V.Add(V, s.chainIdMul)
+	//  }
 	 return R, S, V, nil
  }
  
  // Hash returns the hash to be signed by the sender.
  // It does not uniquely identify the transaction.
  func (s EIP155FdSigner) Hash(sender, submitter common.Address, gasPrice, index, length uint64, commitment []byte) common.Hash {
-	data := make([]byte,0)	
+	data := make([]byte,0)
+	data = append(data, uint64ToBigEndianHexBytes(s.chainId.Uint64())...)	
 	data = append(data, sender.Bytes()...)
 	data = append(data, submitter.Bytes()...)
-
-	//common.Hex2Bytes(strconv.FormatUint(value, 16))
 	data = append(data, uint64ToBigEndianHexBytes(gasPrice)...)
-	gasPricestr := hex.EncodeToString(uint64ToBigEndianHexBytes(gasPrice))
-	println("------gasPricestr----",gasPricestr)
 	data = append(data, uint64ToBigEndianHexBytes(index)...)
-	indexstr := hex.EncodeToString(uint64ToBigEndianHexBytes(index))
-	println("------indexstr----",indexstr)
 	data = append(data, uint64ToBigEndianHexBytes(length)...)
-	lengthstr := hex.EncodeToString(uint64ToBigEndianHexBytes(length))
-	println("------lengthstr----",lengthstr)
 	data = append(data, commitment...)
-
-	str := hex.EncodeToString(data)
-	println("Hash----",str)
-
 	return crypto.Keccak256Hash(data)
-	 
-	//  rlpHash([]interface{}{
-	// 	 sender,
-	// 	 submitter,
-	// 	 gasPrice,
-	// 	 index,
-	// 	 length,
-	// 	 commitment,
-	// 	 s.chainId, 
-	// 	 uint(0), 
-	// 	 uint(0),
-	//  })
  }
  
  // HomesteadFdSigner implements Signer interface using the

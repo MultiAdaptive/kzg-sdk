@@ -20,6 +20,8 @@ func rlpHash(x interface{}) (h common.Hash) {
 }
 
 
+
+
 func uint64ToBigEndianHexBytes(value uint64) []byte {
 	// 创建一个长度为 8 的字节切片
 	byteData := make([]byte, 8)

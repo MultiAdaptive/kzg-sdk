@@ -1,7 +1,6 @@
 package kzg_sdk
 
 import (
-	"encoding/hex"
 	"math/big"
 	"testing"
 
@@ -12,26 +11,17 @@ func TestEIP155FdSigning(t *testing.T) {
 	key, _ := crypto.GenerateKey()
 	senAddr := crypto.PubkeyToAddress(key.PublicKey)
 	println("senAddr----",senAddr.Hex())
-	signer := NewEIP155FdSigner(big.NewInt(33211))
+	signer := NewEIP155FdSigner(big.NewInt(332111))
   index := 1
 	length := 10
 	gasPrice := 10
 	commit := []byte("commit")
-
-	dat := hex.EncodeToString(commit)
-	println("commit----",dat)
 
 	//sign 
 	signHash,signData,err := SignFd(senAddr,senAddr,uint64(gasPrice),uint64(index),uint64(length),commit,signer, key)
 	if err != nil {
 		t.Errorf("err----- %x",err.Error())
 	}
-
-	println("signHash----",signHash.Hex())
-
-	signStr := hex.EncodeToString(signData)
-
-	println("signData----",signStr)
 
 	// verify
 	from, err := FdSender(signer,signData,signHash)
