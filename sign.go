@@ -7,6 +7,7 @@ package kzg_sdk
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -135,17 +136,38 @@ func FdSignerGetVValue(signer FdSigner, sig []byte) uint64 {
  // Hash returns the hash to be signed by the sender.
  // It does not uniquely identify the transaction.
  func (s EIP155FdSigner) Hash(sender, submitter common.Address, gasPrice, index, length uint64, commitment []byte) common.Hash {
-	 return rlpHash([]interface{}{
-		 sender,
-		 submitter,
-		 gasPrice,
-		 index,
-		 length,
-		 commitment,
-		 s.chainId, 
-		 uint(0), 
-		 uint(0),
-	 })
+	data := make([]byte,0)	
+	data = append(data, sender.Bytes()...)
+	data = append(data, submitter.Bytes()...)
+
+	//common.Hex2Bytes(strconv.FormatUint(value, 16))
+	data = append(data, uint64ToBigEndianHexBytes(gasPrice)...)
+	gasPricestr := hex.EncodeToString(uint64ToBigEndianHexBytes(gasPrice))
+	println("------gasPricestr----",gasPricestr)
+	data = append(data, uint64ToBigEndianHexBytes(index)...)
+	indexstr := hex.EncodeToString(uint64ToBigEndianHexBytes(index))
+	println("------indexstr----",indexstr)
+	data = append(data, uint64ToBigEndianHexBytes(length)...)
+	lengthstr := hex.EncodeToString(uint64ToBigEndianHexBytes(length))
+	println("------lengthstr----",lengthstr)
+	data = append(data, commitment...)
+
+	str := hex.EncodeToString(data)
+	println("Hash----",str)
+
+	return crypto.Keccak256Hash(data)
+	 
+	//  rlpHash([]interface{}{
+	// 	 sender,
+	// 	 submitter,
+	// 	 gasPrice,
+	// 	 index,
+	// 	 length,
+	// 	 commitment,
+	// 	 s.chainId, 
+	// 	 uint(0), 
+	// 	 uint(0),
+	//  })
  }
  
  // HomesteadFdSigner implements Signer interface using the
