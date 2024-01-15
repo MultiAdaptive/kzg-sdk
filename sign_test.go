@@ -11,6 +11,7 @@ func TestEIP155FdSigning(t *testing.T) {
 	key, _ := crypto.GenerateKey()
 	senAddr := crypto.PubkeyToAddress(key.PublicKey)
 	println("senAddr----",senAddr.Hex())
+	//chain upflow is the max of uint64
 	signer := NewEIP155FdSigner(big.NewInt(332111))
   index := 1
 	length := 10
