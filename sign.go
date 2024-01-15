@@ -54,6 +54,15 @@ import (
 	 return addr, nil
  }
  
+func FdGetSender(signer FdSigner,sig []byte,sender,submmiter common.Address,gasPrice,index,length uint64,commitment []byte) (common.Address,error){
+	h := signer.Hash(sender,submmiter,gasPrice,index,length,commitment)
+	addr,err := signer.Sender(sig, h)
+	 if err != nil {
+		 return common.Address{}, err
+	 }
+	 return addr,nil
+}
+
  // FdSigner encapsulates fileData signature handling. The name of this type is slightly
  // misleading because Signers don't actually sign, they're just for validating and
  // processing of signatures.
