@@ -30,16 +30,14 @@ import (
 	 if len(sig) == 0 {
 		 return h,nil,errors.New("sign is empty")
 	 }
-	 r, s, v, err := signer.SignatureValues(sig)
-	 if err != nil {
-		 return h,nil, err
-	 }
-
-	 newSign := make([]byte, 0)
-	 newSign = append(newSign, r.Bytes()...)
-	 newSign = append(newSign, s.Bytes()...)
-	 newSign = append(newSign, v.Bytes()...)
-	return h,newSign,nil
+	//  r, s, v, err := signer.SignatureValues(sig)
+	//  if err != nil {
+	// 	 return h,nil, err
+	//  }
+	v := []byte{sig[64] + 27}
+	newSig := sig[:64]
+	newSig = append(newSig, v...)
+	return h,newSig,nil
  }
  
  // FdSender returns the address derived from the signature (V, R, S) using secp256k1
@@ -56,7 +54,7 @@ import (
  
 func FdGetSender(signer FdSigner,sig []byte,sender,submmiter common.Address,gasPrice,index,length uint64,commitment []byte) (common.Address,error){
 	h := signer.Hash(sender,submmiter,gasPrice,index,length,commitment)
-	addr,err := signer.Sender(sig, h)
+	 addr,err := signer.Sender(sig, h)
 	 if err != nil {
 		 return common.Address{}, err
 	 }
@@ -77,7 +75,6 @@ func FdGetSender(signer FdSigner,sig []byte,sender,submmiter common.Address,gasP
 	 // given signature.
 	 SignatureValues(sig []byte) (r, s, v *big.Int, err error)
 	 
-
 	 ChainID() *big.Int
  
 	 // Hash returns 'signature hash', i.e. the fileData hash that is signed by the
@@ -119,7 +116,6 @@ func FdGetSender(signer FdSigner,sig []byte,sender,submmiter common.Address,gasP
 	 R,S,V := sliteSignature(sig)
 	//  V = new(big.Int).Sub(V, s.chainIdMul)
 	//  V.Sub(V, big8)
-	//  println("v----",V.Uint64())
 	 return recoverPlain(signHash, R, S, V, true)
  }
  
@@ -220,7 +216,6 @@ func FdGetSender(signer FdSigner,sig []byte,sender,submmiter common.Address,gasP
 	 r = new(big.Int).SetBytes(sig[:32])
 	 s = new(big.Int).SetBytes(sig[32:64])
 	 v = new(big.Int).SetBytes([]byte{sig[64] + 27})
-
 	 return r, s, v
  }
 
