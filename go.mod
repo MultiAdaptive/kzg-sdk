@@ -1,6 +1,6 @@
 module github.com/domicon-labs/kzg-sdk
 
-go 1.21.3
+go 1.20
 
 require (
 	github.com/consensys/gnark-crypto v0.12.1
