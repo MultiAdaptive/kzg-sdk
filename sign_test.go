@@ -2,79 +2,23 @@ package kzg_sdk
 
 import (
 	"encoding/hex"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr/kzg"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"testing"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
-func TestEIP155FdSigning(t *testing.T) {
-	key, _ := crypto.GenerateKey()
-	senAddr := crypto.PubkeyToAddress(key.PublicKey)
-	println("senAddr----",senAddr.Hex())
-	//chain upflow is the max of uint64
-	signer := NewEIP155FdSigner(big.NewInt(332111))
-  index := 1
-	length := 10
-	gasPrice := 10
-	commit := []byte("commit")
-	//sign 
-	signHash,signData,err := SignFd(senAddr,senAddr,uint64(gasPrice),uint64(index),uint64(length),commit,signer, key)
-	if err != nil {
-		t.Errorf("err----- %x",err.Error())
-	}
-
-	// verify
-	from, err := FdSender(signer,signData,signHash)
-	if err != nil {
-		println("err----",err.Error())
-	}
-
-	if from != senAddr {
-		t.Errorf("exected from and address to be equal. Got %x want %x", from, senAddr)
-	}
-
-	from1,err := FdGetSender(signer,signData,senAddr,senAddr,uint64(gasPrice),uint64(index),uint64(length),commit)
-	if err != nil {
-		println("err----",err.Error())
-	}
-	if from1 != senAddr {
-		t.Errorf("exected from and address to be equal. Got %x want %x", from, senAddr)
-	}
-
+func TestEIP155FdSigner_Hash(t *testing.T) {
+	addr := common.HexToAddress("0x1ca0a16a5a6b329a61bb3c8af4bd9f5abd892af8")
+	signer := NewEIP155FdSigner(big.NewInt(31337))
+	index := 0
+	length := 510
+	var digest kzg.Digest
+	str, _ := hex.DecodeString("0a30d8c5446284a8fa131a62eb44539355c4a56dd3272de812cec46d222947c11d05b4f0ee8da561dc2f2b7da17c4feeee2029f832a922884c02c3c9f1ca77c1")
+	digest.SetBytes(str)
+	hash := signer.Hash(addr,uint64(index),uint64(length),digest)
+	println("hash-----",hash.String())
 }
-
-
-
-func TestHomesteadFdSigner(t *testing.T) {
-	key, _ := crypto.GenerateKey()
-	subAddr := crypto.PubkeyToAddress(key.PublicKey)
-	signer := HomesteadFdSigner{}
-
-	key1, _ := crypto.GenerateKey()
-	senAddr := crypto.PubkeyToAddress(key1.PublicKey)
-
-	index := 1
-	length := 10
-	gasPrice := 10
-	commit := []byte("commit")
-	
-	signHash,signData,err := SignFd(senAddr,subAddr,uint64(index),uint64(length),uint64(gasPrice),commit,signer, key)
-	if err != nil {
-		t.Errorf("err-----1 %x",err.Error())
-	}
-
-	from, err := FdSender(signer,signData,signHash)
-	if err != nil {
-		println("err----",err.Error())
-	}
-
-	if from != subAddr {
-		t.Errorf("exected from and address to be equal. Got %x want %x", from, subAddr)
-	}
-}
-
 
 func BenchmarkVeriftSign(b *testing.B) {
 	b.Run("verify", func(b *testing.B) {

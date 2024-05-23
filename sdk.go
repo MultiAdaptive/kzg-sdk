@@ -8,9 +8,9 @@ import (
 	"os"
 
 	"github.com/consensys/gnark-crypto/ecc"
-	bls12381 "github.com/consensys/gnark-crypto/ecc/bls12-381"
-	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
-	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr/kzg"
+	bn254 "github.com/consensys/gnark-crypto/ecc/bn254"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr/kzg"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -49,7 +49,7 @@ func GenerateSRSFile(srsSize uint64) error {
 // all user should load same srs file
 func InitDomiconSdk(srsSize uint64, srsPath string) (*DomiconSdk, error) {
 	var newsrs kzg.SRS
-	newsrs.Pk.G1 = make([]bls12381.G1Affine, srsSize)
+	newsrs.Pk.G1 = make([]bn254.G1Affine, srsSize)
 	if _, err := os.Stat(srsPath); err != nil {
 		return nil, err
 	}

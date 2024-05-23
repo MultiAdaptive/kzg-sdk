@@ -9,6 +9,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr/kzg"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -17,12 +18,12 @@ import (
  
  var (
 	 ErrInvalidSig           = errors.New("invalid fileData v, r, s values")
-	 ErrInvalidChainId 				= errors.New("invalid chain id for signer")
+	 ErrInvalidChainId 	 = errors.New("invalid chain id for signer")
  )
   
  // SignFd signs the fileData using the given signer and private key.
- func SignFd(sender, submitter common.Address, gasPrice, index, length uint64, commitment []byte, signer FdSigner, prv *ecdsa.PrivateKey) (common.Hash,[]byte, error) {
-	 h := signer.Hash(sender,submitter,gasPrice,index,length,commitment)
+ func SignFd(sender common.Address,index, length uint64, commitment kzg.Digest, signer FdSigner, prv *ecdsa.PrivateKey) (common.Hash,[]byte, error) {
+	 h := signer.Hash(sender,index,length,commitment)
 	 sig, err := crypto.Sign(h[:], prv)
 	 if err != nil {
 		 return h,nil, err
@@ -30,14 +31,10 @@ import (
 	 if len(sig) == 0 {
 		 return h,nil,errors.New("sign is empty")
 	 }
-	//  r, s, v, err := signer.SignatureValues(sig)
-	//  if err != nil {
-	// 	 return h,nil, err
-	//  }
-	v := []byte{sig[64] + 27}
-	newSig := sig[:64]
-	newSig = append(newSig, v...)
-	return h,newSig,nil
+	 v := []byte{sig[64] + 27}
+	 newSig := sig[:64]
+	 newSig = append(newSig, v...)
+	 return h,newSig,nil
  }
  
  // FdSender returns the address derived from the signature (V, R, S) using secp256k1
@@ -52,8 +49,8 @@ import (
 	 return addr, nil
  }
  
-func FdGetSender(signer FdSigner,sig []byte,sender,submmiter common.Address,gasPrice,index,length uint64,commitment []byte) (common.Address,error){
-	h := signer.Hash(sender,submmiter,gasPrice,index,length,commitment)
+func FdGetSender(signer FdSigner,sig []byte,sender common.Address,index,length uint64,commitment kzg.Digest) (common.Address,error){
+	 h := signer.Hash(sender,index,length,commitment)
 	 addr,err := signer.Sender(sig, h)
 	 if err != nil {
 		 return common.Address{}, err
@@ -79,7 +76,7 @@ func FdGetSender(signer FdSigner,sig []byte,sender,submmiter common.Address,gasP
  
 	 // Hash returns 'signature hash', i.e. the fileData hash that is signed by the
 	 // private key. This hash does not uniquely identify the fileData.
-	 Hash(sender, submitter common.Address, gasPrice, index, length uint64, commitment []byte) common.Hash
+	 Hash(sender common.Address, index, length uint64, commitment kzg.Digest) common.Hash
 	 
 	 // Equal returns true if the given signer is the same as the receiver.
 	 Equal(FdSigner) bool
@@ -114,8 +111,6 @@ func FdGetSender(signer FdSigner,sig []byte,sender,submmiter common.Address,gasP
  
  func (s EIP155FdSigner) Sender(sig []byte, signHash common.Hash) (common.Address, error) {
 	 R,S,V := sliteSignature(sig)
-	//  V = new(big.Int).Sub(V, s.chainIdMul)
-	//  V.Sub(V, big8)
 	 return recoverPlain(signHash, R, S, V, true)
  }
  
@@ -123,24 +118,26 @@ func FdGetSender(signer FdSigner,sig []byte,sender,submmiter common.Address,gasP
  // needs to be in the [R || S || V] format where V is 0 or 1.
  func (s EIP155FdSigner) SignatureValues(sig []byte) (R, S, V *big.Int, err error) {
 	 R, S, V = decodeSignature(sig)
-	//  if s.chainId.Sign() != 0 {
-	// 	 V = big.NewInt(int64(sig[64] + 35))
-	// 	 V.Add(V, s.chainIdMul)
-	//  }
 	 return R, S, V, nil
  }
  
  // Hash returns the hash to be signed by the sender.
  // It does not uniquely identify the transaction.
- func (s EIP155FdSigner) Hash(sender, submitter common.Address, gasPrice, index, length uint64, commitment []byte) common.Hash {
+ func (s EIP155FdSigner) Hash(sender common.Address, index, length uint64, commitment kzg.Digest) common.Hash {
 	data := make([]byte,0)
-	data = append(data, uint64ToBigEndianHexBytes(s.chainId.Uint64())...)	
-	data = append(data, sender.Bytes()...)
-	data = append(data, submitter.Bytes()...)
-	data = append(data, uint64ToBigEndianHexBytes(gasPrice)...)
-	data = append(data, uint64ToBigEndianHexBytes(index)...)
-	data = append(data, uint64ToBigEndianHexBytes(length)...)
-	data = append(data, commitment...)
+	dt := uint64ToBigEndianHexBytes(s.chainId.Uint64())
+	chainId := transTo32Byte(dt)
+	indexByte := transTo32Byte(uint64ToBigEndianHexBytes(index))
+	lengthByte := transTo32Byte(uint64ToBigEndianHexBytes(length))
+	addrByte := transTo32Byte(sender.Bytes())
+	commitXByte := commitment.X.Bytes()
+	commitYByte := commitment.Y.Bytes()
+	data = append(data,chainId[:]...)
+	data = append(data,addrByte[:]...)
+	data = append(data,indexByte[:]...)
+	data = append(data,lengthByte[:]...)
+	data = append(data,commitXByte[:]...)
+	data = append(data,commitYByte[:]...)
 	return crypto.Keccak256Hash(data)
  }
  
@@ -198,15 +195,19 @@ func FdGetSender(signer FdSigner,sig []byte,sender,submmiter common.Address,gasP
  
  // Hash returns the hash to be signed by the sender.
  // It does not uniquely identify the transaction.
- func (fs FrontierFdSigner) Hash(sender, submitter common.Address, gasPrice, index, length uint64, commitment []byte) common.Hash {
-	 return rlpHash([]interface{}{
-		 sender,
-		 submitter,
-		 gasPrice,
-		 index,
-		 length,
-		 commitment, 
-	 })
+ func (fs FrontierFdSigner) Hash(sender common.Address,index, length uint64, commitment kzg.Digest) common.Hash {
+	 data := make([]byte,0)
+	 indexByte := transTo32Byte(uint64ToBigEndianHexBytes(index))
+	 lengthByte := transTo32Byte(uint64ToBigEndianHexBytes(length))
+	 addrByte := transTo32Byte(sender.Bytes())
+	 commitXByte := commitment.X.Bytes()
+	 commitYByte := commitment.Y.Bytes()
+	 data = append(data,addrByte[:]...)
+	 data = append(data,indexByte[:]...)
+	 data = append(data,lengthByte[:]...)
+	 data = append(data,commitXByte[:]...)
+	 data = append(data,commitYByte[:]...)
+	 return crypto.Keccak256Hash(data)
  }
  
  func decodeSignature(sig []byte) (r, s, v *big.Int) {
