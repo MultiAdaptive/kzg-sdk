@@ -11,11 +11,11 @@ import (
 	bn254 "github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/kzg"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
+	//"github.com/ethereum/go-ethereum/common"
+	//"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/secp256k1"
-	solsha3 "github.com/miguelmota/go-solidity-sha3"
+	//"github.com/ethereum/go-ethereum/crypto/secp256k1"
+	//solsha3 "github.com/miguelmota/go-solidity-sha3"
 )
 
 const dChunkSize = 30
@@ -91,16 +91,16 @@ func (domiconSdk *DomiconSdk) DataCommit(polynomials []fr.Element) (kzg.Digest, 
 	return digest, err
 }
 
-func (domiconSdk *DomiconSdk) TxSign(key *ecdsa.PrivateKey, commitment kzg.Digest, addressA common.Address, addressB common.Address, data []byte) ([]byte, []byte) {
-	commitmentBytes := commitment.Bytes()
-	var mergedData []byte
-	mergedData = append(mergedData, commitmentBytes[:]...)
-	mergedData = append(mergedData, addressA.Bytes()...)
-	mergedData = append(mergedData, addressB.Bytes()...)
-	mergedData = append(mergedData, data...)
-
-	return sign(string(mergedData), key)
-}
+//func (domiconSdk *DomiconSdk) TxSign(key *ecdsa.PrivateKey, commitment kzg.Digest, addressA common.Address, addressB common.Address, data []byte) ([]byte, []byte) {
+//	commitmentBytes := commitment.Bytes()
+//	var mergedData []byte
+//	mergedData = append(mergedData, commitmentBytes[:]...)
+//	mergedData = append(mergedData, addressA.Bytes()...)
+//	mergedData = append(mergedData, addressB.Bytes()...)
+//	mergedData = append(mergedData, data...)
+//
+//	return sign(string(mergedData), key)
+//}
 
 func chunkBytes(data []byte, chunkSize int) [][]byte {
 	var chunks [][]byte
@@ -116,7 +116,7 @@ func chunkBytes(data []byte, chunkSize int) [][]byte {
 	return chunks
 }
 
-func eyGen() *ecdsa.PrivateKey {
+func keyGen() *ecdsa.PrivateKey {
 	key, err := ecdsa.GenerateKey(crypto.S256(), rand.Reader)
 
 	if err != nil {
@@ -125,20 +125,18 @@ func eyGen() *ecdsa.PrivateKey {
 
 	return key
 }
-
-func sign(message string, key *ecdsa.PrivateKey) ([]byte, []byte) {
-	// Turn the message into a 32-byte hash
-	hash := solsha3.SoliditySHA3(solsha3.String(message))
-	// Prefix and then hash to mimic behavior of eth_sign
-	prefixed := solsha3.SoliditySHA3(solsha3.String("\x19Ethereum Signed Message:\n32"), solsha3.Bytes32(hash))
-	sig, err := secp256k1.Sign(prefixed, math.PaddedBigBytes(key.D, 32))
-
-	if err != nil {
-		panic(err)
-	}
-
-	return sig, prefixed
-}
+//
+//func sign(message string, key *ecdsa.PrivateKey) ([]byte, []byte) {
+//	// Turn the message into a 32-byte hash
+//	hash := solsha3.SoliditySHA3(solsha3.String(message))
+//	// Prefix and then hash to mimic behavior of eth_sign
+//	prefixed := solsha3.SoliditySHA3(solsha3.String("\x19Ethereum Signed Message:\n32"), solsha3.Bytes32(hash))
+//	sig, err := secp256k1.Sign(prefixed, math.PaddedBigBytes(key.D, 32))
+//	if err != nil {
+//		panic(err)
+//	}
+//	return sig, prefixed
+//}
 
 func random1Polynomial(size int) []fr.Element {
 	f := make([]fr.Element, size)
