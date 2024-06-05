@@ -1,4 +1,4 @@
-module github.com/domicon-labs/kzg-sdk
+module github.com/MultiAdaptive/kzg-sdk
 
 go 1.20
 
