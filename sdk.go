@@ -113,6 +113,24 @@ func (domiconSdk *DomiconSdk) GenerateDataCommit(data []byte) (kzg.Digest, error
 	return digest, nil
 }
 
+func (domiconSdk *DomiconSdk) GenerateDataCommitAndProof(data []byte) (kzg.Digest, kzg.OpeningProof,error){
+	poly := dataToPolynomial(data)
+	digest, err := kzg.Commit(poly, domiconSdk.srs.Pk)
+	if err != nil {
+		return kzg.Digest{}, kzg.OpeningProof{},err
+	}
+
+	commitHash := common.BytesToHash(digest.Marshal())
+	var openPoint fr.Element
+	openPoint.SetBytes(commitHash[:])
+
+	openingProof,err := kzg.Open(poly,openPoint,domiconSdk.srs.Pk)
+	if err != nil {
+		return digest, kzg.OpeningProof{},err
+	}
+	return digest,openingProof,nil
+}
+
 func (domiconSdk *DomiconSdk) DataToPolynomial(data []byte) []fr.Element {
 	return dataToPolynomial(data)
 }

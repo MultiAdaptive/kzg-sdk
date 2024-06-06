@@ -112,6 +112,7 @@ func TestInitDomiconSdk(t *testing.T) {
 		println("kzg.Open----",err.Error())
 	}
 
+
 	hValue := openingProof.H.Marshal()
 
 	claimedValue := openingProof.ClaimedValue.Marshal()
