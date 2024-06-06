@@ -20,11 +20,6 @@ func TestEIP155FdSigner_Hash(t *testing.T) {
 	println("hash-----",hash.String())
 }
 
-func TestFrontierFdSigner_SignatureValues(t *testing.T) {
-	signer := NewEIP155FdSigner(big.NewInt(11155111))
-	signer.
-}
-
 
 func BenchmarkVeriftSign(b *testing.B) {
 	b.Run("verify", func(b *testing.B) {

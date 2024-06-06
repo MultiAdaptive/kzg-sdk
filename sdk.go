@@ -4,9 +4,9 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"os"
-
 	"github.com/consensys/gnark-crypto/ecc"
 	bn254 "github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
@@ -20,6 +20,11 @@ import (
 
 const dChunkSize = 30
 const dSrsSize = 1 << 16
+
+var (
+	executed  bool
+	Domicon  DomiconSdk
+)
 
 type DomiconSdk struct {
 	srs *kzg.SRS
@@ -48,26 +53,55 @@ func GenerateSRSFile(srsSize uint64) error {
 
 // all user should load same srs file
 func InitDomiconSdk(srsSize uint64, srsPath string) (*DomiconSdk, error) {
-	var newsrs kzg.SRS
-	newsrs.Pk.G1 = make([]bn254.G1Affine, srsSize)
-	if _, err := os.Stat(srsPath); err != nil {
-		return nil, err
+	if !executed {
+		var newsrs kzg.SRS
+		newsrs.Pk.G1 = make([]bn254.G1Affine, srsSize)
+		if _, err := os.Stat(srsPath); err != nil {
+			return nil, err
+		}
+		file, err := os.Open(srsPath)
+		if err != nil {
+			return nil, err
+		}
+		defer file.Close()
+		_, err = newsrs.ReadFrom(file)
+		if err != nil {
+			return nil, err
+		}
+		Domicon = DomiconSdk{srs: &newsrs}
+		return &Domicon, nil
+	}else {
+		return &Domicon,nil
 	}
-	file, err := os.Open(srsPath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	_, err = newsrs.ReadFrom(file)
-	if err != nil {
-		return nil, err
-	}
-
-	return &DomiconSdk{srs: &newsrs}, nil
 }
 
-func (domiconSdk *DomiconSdk) SRS() kzg.SRS {
-	return *domiconSdk.srs
+func (domiconSdk *DomiconSdk) VerifyCommitWithProof(commit []byte,proof []byte,claimedValue []byte) (bool,error) {
+	var h bn254.G1Affine
+	h.SetBytes(proof)
+	var c fr.Element
+	c.SetBytes(claimedValue)
+
+	var prof kzg.OpeningProof
+	prof.H = h
+	prof.ClaimedValue = c
+
+	point := common.BytesToHash(commit)
+	var p  fr.Element
+	p.SetBytes(point[:])
+
+	var digest kzg.Digest
+	digest.SetBytes(commit)
+
+	err := kzg.Verify(&digest,&prof,p,domiconSdk.srs.Vk)
+	if err != nil {
+		return false, err
+	}else {
+		return true,nil
+	}
+}
+
+func (domiconSdk *DomiconSdk) SRS() *kzg.SRS  {
+	return domiconSdk.srs
 }
 
 func (domiconSdk *DomiconSdk) GenerateDataCommit(data []byte) (kzg.Digest, error) {
@@ -77,6 +111,10 @@ func (domiconSdk *DomiconSdk) GenerateDataCommit(data []byte) (kzg.Digest, error
 		return kzg.Digest{}, err
 	}
 	return digest, nil
+}
+
+func (domiconSdk *DomiconSdk) DataToPolynomial(data []byte) []fr.Element {
+	return dataToPolynomial(data)
 }
 
 func dataToPolynomial(data []byte) []fr.Element {
