@@ -66,6 +66,10 @@ func InitDomiconSdk(srsSize uint64, srsPath string) (*DomiconSdk, error) {
 	return &DomiconSdk{srs: &newsrs}, nil
 }
 
+func (domiconSdk *DomiconSdk) SRS() kzg.SRS {
+	return *domiconSdk.srs
+}
+
 func (domiconSdk *DomiconSdk) GenerateDataCommit(data []byte) (kzg.Digest, error) {
 	poly := dataToPolynomial(data)
 	digest, err := kzg.Commit(poly, domiconSdk.srs.Pk)

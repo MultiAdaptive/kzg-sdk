@@ -10,15 +10,21 @@ import (
 
 func TestEIP155FdSigner_Hash(t *testing.T) {
 	addr := common.HexToAddress("0x1ca0a16a5a6b329a61bb3c8af4bd9f5abd892af8")
-	signer := NewEIP155FdSigner(big.NewInt(31337))
+	signer := NewEIP155FdSigner(big.NewInt(11155111))
 	index := 0
-	length := 510
+	length := 1024
 	var digest kzg.Digest
 	str, _ := hex.DecodeString("0a30d8c5446284a8fa131a62eb44539355c4a56dd3272de812cec46d222947c11d05b4f0ee8da561dc2f2b7da17c4feeee2029f832a922884c02c3c9f1ca77c1")
 	digest.SetBytes(str)
 	hash := signer.Hash(addr,uint64(index),uint64(length),digest)
 	println("hash-----",hash.String())
 }
+
+func TestFrontierFdSigner_SignatureValues(t *testing.T) {
+	signer := NewEIP155FdSigner(big.NewInt(11155111))
+	signer.
+}
+
 
 func BenchmarkVeriftSign(b *testing.B) {
 	b.Run("verify", func(b *testing.B) {
