@@ -22,8 +22,8 @@ const dChunkSize = 30
 const dSrsSize = 1 << 20
 
 var (
-	executed bool
-	Domicon  MultiAdaptiveSdk
+	executed      bool
+	MultiAdaptive MultiAdaptiveSdk
 )
 
 type MultiAdaptiveSdk struct {
@@ -68,10 +68,10 @@ func InitMultiAdaptiveSdk(srsPath string) (*MultiAdaptiveSdk, error) {
 		if err != nil {
 			return nil, err
 		}
-		Domicon = MultiAdaptiveSdk{srs: &newsrs}
-		return &Domicon, nil
+		MultiAdaptive = MultiAdaptiveSdk{srs: &newsrs}
+		return &MultiAdaptive, nil
 	} else {
-		return &Domicon, nil
+		return &MultiAdaptive, nil
 	}
 }
 
@@ -211,7 +211,7 @@ func random1Polynomial(size int) []fr.Element {
 func main() {
 	fmt.Println("The steps to generate CD(commit data)")
 	//sdk := NewMultiAdaptiveSdk(dSrsSize)
-	fmt.Println("1. load SRS file to init domicon SDK")
+	fmt.Println("1. load SRS file to init MultiAdaptive SDK")
 	sdk, err := InitMultiAdaptiveSdk(dSrsSize, "./srs")
 	if err != nil {
 		fmt.Println("InitMultiAdaptiveSdk failed")

@@ -1,9 +1,8 @@
-package kzg_sdk_test
+package kzg_sdk
 
 import (
 	"bytes"
 	"crypto/sha256"
-	kzg_sdk "github.com/domicon-labs/kzg-sdk"
 	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"strconv"
@@ -80,56 +79,52 @@ func BenchmarkKZGCommit(b *testing.B) {
 //	}
 //}
 
-const dSrsSize = 1 << 16
-
-func TestInitDomiconSdk(t *testing.T) {
+func TestInitMultiAdaptiveSdk(t *testing.T) {
 	index := 1
 	s := strconv.Itoa(index)
 	data := bytes.Repeat([]byte(s), 1024)
 
-	d,err := kzg_sdk.InitDomiconSdk(dSrsSize,"./srs")
+	d, err := InitMultiAdaptiveSdk("./srs")
 	if err != nil {
-		println("InitDomiconSdk err",err.Error())
+		println("InitMultiAdaptiveSdk err", err.Error())
 	}
-	commit,err := d.GenerateDataCommit(data)
+	commit, err := d.GenerateDataCommit(data)
 	if err != nil {
-		println("GenerateDataCommit err",err.Error())
+		println("GenerateDataCommit err", err.Error())
 	}
 
 	commitHex := common.Bytes2Hex(commit.Marshal())
-	println("commitHex----",commitHex)
+	println("commitHex----", commitHex)
 
 	commitHash := common.BytesToHash(commit.Marshal())
-	println("commitHash-----",commitHash.String())
+	println("commitHash-----", commitHash.String())
 
 	var openPoint fr.Element
 	openPoint.SetBytes(commitHash[:])
 
 	poly := d.DataToPolynomial(data)
 
-	openingProof,err := kzg.Open(poly,openPoint,d.SRS().Pk)
+	openingProof, err := kzg.Open(poly, openPoint, d.SRS().Pk)
 	if err != nil {
-		println("kzg.Open----",err.Error())
+		println("kzg.Open----", err.Error())
 	}
-
 
 	hValue := openingProof.H.Marshal()
 
 	claimedValue := openingProof.ClaimedValue.Marshal()
 
-	flag,err := d.VerifyCommitWithProof(commit.Marshal(),hValue,claimedValue)
+	flag, err := d.VerifyCommitWithProof(commit.Marshal(), hValue, claimedValue)
 	if err != nil {
-		println("d.VerifyCommitWithProof----",err,err.Error())
+		println("d.VerifyCommitWithProof----", err, err.Error())
 	}
 
-	println("VerifyCommitWithProof----",flag)
+	println("VerifyCommitWithProof----", flag)
 
-	err = kzg.Verify(&commit,&openingProof,openPoint,d.SRS().Vk)
+	err = kzg.Verify(&commit, &openingProof, openPoint, d.SRS().Vk)
 	if err != nil {
-		println("kzg.Verify------",err.Error())
+		println("kzg.Verify------", err.Error())
 	}
 }
-
 
 func BenchmarkKZGOpen(b *testing.B) {
 	srs, err := kzg.NewSRS(ecc.NextPowerOfTwo(benchSize), new(big.Int).SetInt64(42))
