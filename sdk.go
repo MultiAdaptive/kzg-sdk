@@ -23,14 +23,14 @@ const dSrsSize = 1 << 20
 
 var (
 	executed bool
-	Domicon  DomiconSdk
+	Domicon  MultiAdaptiveSdk
 )
 
-type DomiconSdk struct {
+type MultiAdaptiveSdk struct {
 	srs *kzg.SRS
 }
 
-// NewDomiconSdk 初始化sdk，可以设置srsSize=1 << 16
+// NewMultiAdaptiveSdk 初始化sdk，可以设置srsSize=1 << 16
 func GenerateSRSFile() error {
 	quickSrs, err := kzg.NewSRS(ecc.NextPowerOfTwo(dSrsSize), big.NewInt(-1))
 	if err != nil {
@@ -52,7 +52,7 @@ func GenerateSRSFile() error {
 }
 
 // all user should load same srs file
-func InitDomiconSdk(srsPath string) (*DomiconSdk, error) {
+func InitMultiAdaptiveSdk(srsPath string) (*MultiAdaptiveSdk, error) {
 	if !executed {
 		var newsrs kzg.SRS
 		newsrs.Pk.G1 = make([]bn254.G1Affine, dSrsSize)
@@ -68,14 +68,14 @@ func InitDomiconSdk(srsPath string) (*DomiconSdk, error) {
 		if err != nil {
 			return nil, err
 		}
-		Domicon = DomiconSdk{srs: &newsrs}
+		Domicon = MultiAdaptiveSdk{srs: &newsrs}
 		return &Domicon, nil
 	} else {
 		return &Domicon, nil
 	}
 }
 
-func (domiconSdk *DomiconSdk) VerifyCommitWithProof(commit []byte, proof []byte, claimedValue []byte) (bool, error) {
+func (multiAdaptiveSdk *MultiAdaptiveSdk) VerifyCommitWithProof(commit []byte, proof []byte, claimedValue []byte) (bool, error) {
 	var h bn254.G1Affine
 	h.SetBytes(proof)
 	var c fr.Element
@@ -92,7 +92,7 @@ func (domiconSdk *DomiconSdk) VerifyCommitWithProof(commit []byte, proof []byte,
 	var digest kzg.Digest
 	digest.SetBytes(commit)
 
-	err := kzg.Verify(&digest, &prof, p, domiconSdk.srs.Vk)
+	err := kzg.Verify(&digest, &prof, p, multiAdaptiveSdk.srs.Vk)
 	if err != nil {
 		return false, err
 	} else {
@@ -100,22 +100,22 @@ func (domiconSdk *DomiconSdk) VerifyCommitWithProof(commit []byte, proof []byte,
 	}
 }
 
-func (domiconSdk *DomiconSdk) SRS() *kzg.SRS {
-	return domiconSdk.srs
+func (multiAdaptiveSdk *MultiAdaptiveSdk) SRS() *kzg.SRS {
+	return multiAdaptiveSdk.srs
 }
 
-func (domiconSdk *DomiconSdk) GenerateDataCommit(data []byte) (kzg.Digest, error) {
+func (multiAdaptiveSdk *MultiAdaptiveSdk) GenerateDataCommit(data []byte) (kzg.Digest, error) {
 	poly := dataToPolynomial(data)
-	digest, err := kzg.Commit(poly, domiconSdk.srs.Pk)
+	digest, err := kzg.Commit(poly, multiAdaptiveSdk.srs.Pk)
 	if err != nil {
 		return kzg.Digest{}, err
 	}
 	return digest, nil
 }
 
-func (domiconSdk *DomiconSdk) GenerateDataCommitAndProof(data []byte) (kzg.Digest, kzg.OpeningProof, error) {
+func (multiAdaptiveSdk *MultiAdaptiveSdk) GenerateDataCommitAndProof(data []byte) (kzg.Digest, kzg.OpeningProof, error) {
 	poly := dataToPolynomial(data)
-	digest, err := kzg.Commit(poly, domiconSdk.srs.Pk)
+	digest, err := kzg.Commit(poly, multiAdaptiveSdk.srs.Pk)
 	if err != nil {
 		return kzg.Digest{}, kzg.OpeningProof{}, err
 	}
@@ -124,14 +124,14 @@ func (domiconSdk *DomiconSdk) GenerateDataCommitAndProof(data []byte) (kzg.Diges
 	var openPoint fr.Element
 	openPoint.SetBytes(commitHash[:])
 
-	openingProof, err := kzg.Open(poly, openPoint, domiconSdk.srs.Pk)
+	openingProof, err := kzg.Open(poly, openPoint, multiAdaptiveSdk.srs.Pk)
 	if err != nil {
 		return digest, kzg.OpeningProof{}, err
 	}
 	return digest, openingProof, nil
 }
 
-func (domiconSdk *DomiconSdk) DataToPolynomial(data []byte) []fr.Element {
+func (multiAdaptiveSdk *MultiAdaptiveSdk) DataToPolynomial(data []byte) []fr.Element {
 	return dataToPolynomial(data)
 }
 
@@ -146,12 +146,12 @@ func dataToPolynomial(data []byte) []fr.Element {
 	return ps
 }
 
-func (domiconSdk *DomiconSdk) DataCommit(polynomials []fr.Element) (kzg.Digest, error) {
-	digest, err := kzg.Commit(polynomials, domiconSdk.srs.Pk)
+func (multiAdaptiveSdk *MultiAdaptiveSdk) DataCommit(polynomials []fr.Element) (kzg.Digest, error) {
+	digest, err := kzg.Commit(polynomials, multiAdaptiveSdk.srs.Pk)
 	return digest, err
 }
 
-//func (domiconSdk *DomiconSdk) TxSign(key *ecdsa.PrivateKey, commitment kzg.Digest, addressA common.Address, addressB common.Address, data []byte) ([]byte, []byte) {
+//func (multiAdaptiveSdk *MultiAdaptiveSdk) TxSign(key *ecdsa.PrivateKey, commitment kzg.Digest, addressA common.Address, addressB common.Address, data []byte) ([]byte, []byte) {
 //	commitmentBytes := commitment.Bytes()
 //	var mergedData []byte
 //	mergedData = append(mergedData, commitmentBytes[:]...)
@@ -210,11 +210,11 @@ func random1Polynomial(size int) []fr.Element {
 /*
 func main() {
 	fmt.Println("The steps to generate CD(commit data)")
-	//sdk := NewDomiconSdk(dSrsSize)
+	//sdk := NewMultiAdaptiveSdk(dSrsSize)
 	fmt.Println("1. load SRS file to init domicon SDK")
-	sdk, err := InitDomiconSdk(dSrsSize, "./srs")
+	sdk, err := InitMultiAdaptiveSdk(dSrsSize, "./srs")
 	if err != nil {
-		fmt.Println("InitDomiconSdk failed")
+		fmt.Println("InitMultiAdaptiveSdk failed")
 		return
 	}
 
