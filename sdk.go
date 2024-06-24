@@ -4,13 +4,13 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"math/big"
-	"os"
 	"github.com/consensys/gnark-crypto/ecc"
 	bn254 "github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/kzg"
+	"github.com/ethereum/go-ethereum/common"
+	"math/big"
+	"os"
 	//"github.com/ethereum/go-ethereum/common"
 	//"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -19,10 +19,10 @@ import (
 )
 
 const dChunkSize = 30
-const dSrsSize = 1 << 16
+const dSrsSize = 1 << 20
 
 var (
-	executed  bool
+	executed bool
 	Domicon  DomiconSdk
 )
 
@@ -31,8 +31,8 @@ type DomiconSdk struct {
 }
 
 // NewDomiconSdk 初始化sdk，可以设置srsSize=1 << 16
-func GenerateSRSFile(srsSize uint64) error {
-	quickSrs, err := kzg.NewSRS(ecc.NextPowerOfTwo(srsSize), big.NewInt(-1))
+func GenerateSRSFile() error {
+	quickSrs, err := kzg.NewSRS(ecc.NextPowerOfTwo(dSrsSize), big.NewInt(-1))
 	if err != nil {
 		fmt.Println("NewSRS failed, ", err)
 		return err
@@ -52,10 +52,10 @@ func GenerateSRSFile(srsSize uint64) error {
 }
 
 // all user should load same srs file
-func InitDomiconSdk(srsSize uint64, srsPath string) (*DomiconSdk, error) {
+func InitDomiconSdk(srsPath string) (*DomiconSdk, error) {
 	if !executed {
 		var newsrs kzg.SRS
-		newsrs.Pk.G1 = make([]bn254.G1Affine, srsSize)
+		newsrs.Pk.G1 = make([]bn254.G1Affine, dSrsSize)
 		if _, err := os.Stat(srsPath); err != nil {
 			return nil, err
 		}
@@ -70,12 +70,12 @@ func InitDomiconSdk(srsSize uint64, srsPath string) (*DomiconSdk, error) {
 		}
 		Domicon = DomiconSdk{srs: &newsrs}
 		return &Domicon, nil
-	}else {
-		return &Domicon,nil
+	} else {
+		return &Domicon, nil
 	}
 }
 
-func (domiconSdk *DomiconSdk) VerifyCommitWithProof(commit []byte,proof []byte,claimedValue []byte) (bool,error) {
+func (domiconSdk *DomiconSdk) VerifyCommitWithProof(commit []byte, proof []byte, claimedValue []byte) (bool, error) {
 	var h bn254.G1Affine
 	h.SetBytes(proof)
 	var c fr.Element
@@ -86,21 +86,21 @@ func (domiconSdk *DomiconSdk) VerifyCommitWithProof(commit []byte,proof []byte,c
 	prof.ClaimedValue = c
 
 	point := common.BytesToHash(commit)
-	var p  fr.Element
+	var p fr.Element
 	p.SetBytes(point[:])
 
 	var digest kzg.Digest
 	digest.SetBytes(commit)
 
-	err := kzg.Verify(&digest,&prof,p,domiconSdk.srs.Vk)
+	err := kzg.Verify(&digest, &prof, p, domiconSdk.srs.Vk)
 	if err != nil {
 		return false, err
-	}else {
-		return true,nil
+	} else {
+		return true, nil
 	}
 }
 
-func (domiconSdk *DomiconSdk) SRS() *kzg.SRS  {
+func (domiconSdk *DomiconSdk) SRS() *kzg.SRS {
 	return domiconSdk.srs
 }
 
@@ -113,22 +113,22 @@ func (domiconSdk *DomiconSdk) GenerateDataCommit(data []byte) (kzg.Digest, error
 	return digest, nil
 }
 
-func (domiconSdk *DomiconSdk) GenerateDataCommitAndProof(data []byte) (kzg.Digest, kzg.OpeningProof,error){
+func (domiconSdk *DomiconSdk) GenerateDataCommitAndProof(data []byte) (kzg.Digest, kzg.OpeningProof, error) {
 	poly := dataToPolynomial(data)
 	digest, err := kzg.Commit(poly, domiconSdk.srs.Pk)
 	if err != nil {
-		return kzg.Digest{}, kzg.OpeningProof{},err
+		return kzg.Digest{}, kzg.OpeningProof{}, err
 	}
 
 	commitHash := common.BytesToHash(digest.Marshal())
 	var openPoint fr.Element
 	openPoint.SetBytes(commitHash[:])
 
-	openingProof,err := kzg.Open(poly,openPoint,domiconSdk.srs.Pk)
+	openingProof, err := kzg.Open(poly, openPoint, domiconSdk.srs.Pk)
 	if err != nil {
-		return digest, kzg.OpeningProof{},err
+		return digest, kzg.OpeningProof{}, err
 	}
-	return digest,openingProof,nil
+	return digest, openingProof, nil
 }
 
 func (domiconSdk *DomiconSdk) DataToPolynomial(data []byte) []fr.Element {
@@ -185,6 +185,7 @@ func keyGen() *ecdsa.PrivateKey {
 
 	return key
 }
+
 //
 //func sign(message string, key *ecdsa.PrivateKey) ([]byte, []byte) {
 //	// Turn the message into a 32-byte hash
